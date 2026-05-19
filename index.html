@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Мої Фільми</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #13131a;
+    --surface2: #1c1c27;
+    --accent: #e8c96d;
+    --accent2: #c44b4b;
+    --text: #e8e4dc;
+    --muted: #6b6878;
+    --border: #2a2a38;
+    --green: #4caf7d;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 999;
+    opacity: 0.4;
+  }
+
+  /* SETUP */
+  #setupScreen {
+    min-height: 100vh;
+    display: flex; align-items: center; justify-content: center;
+    padding: 2rem;
+  }
+  .setup-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 2.5rem;
+    width: 100%; max-width: 480px;
+  }
+  .setup-logo {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 3rem; letter-spacing: 0.08em; line-height: 1; margin-bottom: 0.3rem;
+  }
+  .setup-logo span { color: var(--accent); }
+  .setup-sub { font-size: 0.82rem; color: var(--muted); margin-bottom: 2rem; letter-spacing: 0.05em; }
+  .setup-step { display: flex; gap: 0.75rem; margin-bottom: 0.9rem; font-size: 0.85rem; color: var(--muted); align-items: flex-start; }
+  .step-num {
+    width: 22px; height: 22px; border-radius: 50%;
+    background: var(--surface2); border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.72rem; flex-shrink: 0; margin-top: 1px;
+    color: var(--accent); font-weight: 500;
+  }
+  .setup-step a { color: var(--accent); text-decoration: none; }
+  .setup-step a:hover { text-decoration: underline; }
+  .setup-step code { background: var(--surface2); padding: 0.1rem 0.35rem; border-radius: 3px; font-size: 0.78rem; color: var(--text); }
+  .setup-input-wrap { margin-top: 1.8rem; }
+  .setup-input-wrap label { display: block; font-size: 0.72rem; color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 0.4rem; }
+  .setup-input-wrap input {
+    width: 100%; padding: 0.75rem 1rem;
+    background: var(--surface2); border: 1px solid var(--border);
+    color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 0.9rem;
+    border-radius: 4px; outline: none; transition: border-color 0.2s;
+  }
+  .setup-input-wrap input:focus { border-color: var(--accent); }
+  .setup-error { color: var(--accent2); font-size: 0.78rem; margin-top: 0.5rem; display: none; }
+  .setup-btn {
+    width: 100%; margin-top: 1rem; padding: 0.8rem;
+    background: var(--accent); border: none; color: var(--bg);
+    font-family: 'DM Sans', sans-serif; font-size: 0.9rem; font-weight: 500;
+    cursor: pointer; border-radius: 4px; transition: opacity 0.15s;
+  }
+  .setup-btn:hover { opacity: 0.85; }
+  .setup-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* APP */
+  #app { display: none; }
+
+  #syncBar {
+    display: flex; align-items: center; gap: 0.6rem;
+    padding: 0.45rem 3rem;
+    background: var(--surface); border-bottom: 1px solid var(--border);
+    font-size: 0.74rem; color: var(--muted);
+  }
+  .sync-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); flex-shrink: 0; }
+  .sync-dot.ok { background: var(--green); }
+  .sync-dot.syncing { background: var(--accent); animation: pulse 1s infinite; }
+  .sync-dot.error { background: var(--accent2); }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+  #syncBar button {
+    margin-left: auto; background: none; border: none; color: var(--muted);
+    font-size: 0.72rem; cursor: pointer; letter-spacing: 0.06em; text-transform: uppercase;
+    text-decoration: underline; font-family: 'DM Sans', sans-serif;
+  }
+  #syncBar button:hover { color: var(--accent2); }
+
+  header {
+    padding: 2rem 3rem 0;
+    display: flex; align-items: flex-end; justify-content: space-between;
+    gap: 2rem; flex-wrap: wrap;
+  }
+  .logo { font-family: 'Bebas Neue', sans-serif; font-size: clamp(2.5rem,5vw,4.5rem); letter-spacing: 0.08em; line-height: 0.9; }
+  .logo span { color: var(--accent); display: block; }
+  .stats { display: flex; gap: 2rem; align-items: center; padding-bottom: 0.4rem; }
+  .stat { text-align: center; }
+  .stat-num { font-family: 'Bebas Neue', sans-serif; font-size: 2rem; color: var(--accent); line-height: 1; }
+  .stat-label { font-size: 0.68rem; color: var(--muted); letter-spacing: 0.12em; text-transform: uppercase; }
+  .divider { width: 1px; height: 36px; background: var(--border); }
+
+  nav { padding: 1.2rem 3rem; display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
+  .tab {
+    padding: 0.4rem 1.1rem; border: 1px solid var(--border); background: transparent;
+    color: var(--muted); font-family: 'DM Sans', sans-serif; font-size: 0.8rem;
+    letter-spacing: 0.08em; text-transform: uppercase; cursor: pointer;
+    transition: all 0.2s; border-radius: 2px;
+  }
+  .tab:hover { color: var(--text); border-color: var(--muted); }
+  .tab.active { background: var(--accent); color: var(--bg); border-color: var(--accent); font-weight: 500; }
+  .add-btn {
+    margin-left: auto; padding: 0.5rem 1.3rem; background: var(--accent2);
+    color: white; border: none; font-family: 'DM Sans', sans-serif;
+    font-size: 0.83rem; letter-spacing: 0.05em; cursor: pointer;
+    border-radius: 2px; transition: opacity 0.2s;
+  }
+  .add-btn:hover { opacity: 0.85; }
+
+  main { padding: 1rem 3rem 4rem; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(158px,1fr)); gap: 1.4rem; }
+  .card { position: relative; cursor: pointer; animation: fadeUp 0.4s ease both; }
+  @keyframes fadeUp { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:translateY(0)} }
+  .card-poster {
+    width: 100%; aspect-ratio: 2/3; object-fit: cover; display: block;
+    background: var(--surface); border-radius: 4px;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+  }
+  .card:hover .card-poster { transform: scale(1.03) translateY(-4px); box-shadow: 0 20px 50px rgba(0,0,0,0.6); }
+  .card-ph {
+    width: 100%; aspect-ratio: 2/3; background: var(--surface2); border-radius: 4px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 0.5rem; color: var(--muted); font-size: 0.75rem; text-align: center;
+    padding: 1rem; transition: transform 0.3s ease;
+  }
+  .card:hover .card-ph { transform: scale(1.03) translateY(-4px); }
+  .ph-icon { font-size: 2rem; opacity: 0.4; }
+  .w-badge {
+    position: absolute; top: 8px; right: 8px; width: 26px; height: 26px;
+    background: rgba(10,10,15,0.85); border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.8rem; backdrop-filter: blur(4px);
+  }
+  .card-info { padding: 0.55rem 0 0; }
+  .card-title { font-size: 0.83rem; font-weight: 500; line-height: 1.3; margin-bottom: 0.2rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .card-meta { font-size: 0.7rem; color: var(--muted); display: flex; gap: 0.5rem; }
+  .card-rating { color: var(--accent); font-weight: 500; }
+  .card-overlay {
+    position: absolute; top: 0; left: 0; right: 0; bottom: 28px;
+    background: rgba(10,10,15,0.88); border-radius: 4px;
+    opacity: 0; transition: opacity 0.25s;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 0.5rem; backdrop-filter: blur(2px);
+  }
+  .card:hover .card-overlay { opacity: 1; }
+  .ov-btn {
+    padding: 0.38rem 0.9rem; border: 1px solid var(--border);
+    background: var(--surface); color: var(--text); font-family: 'DM Sans', sans-serif;
+    font-size: 0.73rem; letter-spacing: 0.05em; cursor: pointer;
+    border-radius: 2px; transition: all 0.15s; width: 80%; text-align: center;
+  }
+  .ov-btn:hover { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+  .ov-btn.danger:hover { background: var(--accent2); border-color: var(--accent2); }
+
+  /* MODAL */
+  .modal-bg {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 100;
+    display: flex; align-items: center; justify-content: center;
+    padding: 1.5rem; backdrop-filter: blur(6px); animation: fadeIn 0.2s ease;
+  }
+  @keyframes fadeIn { from{opacity:0} to{opacity:1} }
+  .modal {
+    background: var(--surface); border: 1px solid var(--border);
+    padding: 2rem; width: 100%; max-width: 500px; border-radius: 6px;
+    animation: slideUp 0.25s ease; max-height: 90vh; overflow-y: auto;
+  }
+  @keyframes slideUp { from{transform:translateY(28px);opacity:0} to{transform:translateY(0);opacity:1} }
+  .modal-title { font-family: 'Bebas Neue', sans-serif; font-size: 1.7rem; letter-spacing: 0.08em; margin-bottom: 1.4rem; color: var(--accent); }
+  .field { margin-bottom: 1rem; }
+  .field label { display: block; font-size: 0.7rem; color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 0.35rem; }
+  .field input, .field select, .field textarea {
+    width: 100%; padding: 0.65rem 0.85rem;
+    background: var(--surface2); border: 1px solid var(--border);
+    color: var(--text); font-family: 'DM Sans', sans-serif;
+    font-size: 0.87rem; border-radius: 3px; outline: none; transition: border-color 0.2s;
+  }
+  .field input:focus, .field select:focus, .field textarea:focus { border-color: var(--accent); }
+  .field select option { background: var(--surface); }
+  .search-results {
+    margin-top: 0.4rem; border: 1px solid var(--border); border-radius: 3px;
+    overflow: hidden; max-height: 200px; overflow-y: auto;
+  }
+  .sr-item {
+    padding: 0.55rem 0.85rem; cursor: pointer;
+    display: flex; align-items: center; gap: 0.7rem;
+    border-bottom: 1px solid var(--border); transition: background 0.15s; font-size: 0.83rem;
+  }
+  .sr-item:last-child { border-bottom: none; }
+  .sr-item:hover { background: var(--surface2); }
+  .sr-item img { width: 28px; height: 42px; object-fit: cover; border-radius: 2px; }
+  .sr-info { flex: 1; min-width: 0; }
+  .sr-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .sr-year { font-size: 0.7rem; color: var(--muted); }
+  .searching-hint { padding: 0.7rem; font-size: 0.78rem; color: var(--muted); text-align: center; }
+  .modal-actions { display: flex; gap: 0.7rem; margin-top: 1.4rem; justify-content: flex-end; }
+  .btn-cancel {
+    padding: 0.5rem 1.2rem; background: transparent; border: 1px solid var(--border);
+    color: var(--muted); font-family: 'DM Sans', sans-serif; font-size: 0.83rem;
+    cursor: pointer; border-radius: 3px; transition: all 0.15s;
+  }
+  .btn-cancel:hover { border-color: var(--text); color: var(--text); }
+  .btn-save {
+    padding: 0.5rem 1.5rem; background: var(--accent); border: none;
+    color: var(--bg); font-family: 'DM Sans', sans-serif; font-size: 0.83rem;
+    font-weight: 500; cursor: pointer; border-radius: 3px; transition: opacity 0.15s;
+  }
+  .btn-save:hover { opacity: 0.85; }
+
+  .empty-state { text-align: center; padding: 5rem 2rem; color: var(--muted); }
+  .empty-icon { font-size: 3rem; margin-bottom: 1rem; opacity: 0.3; }
+  .empty-state h3 { font-family: 'Bebas Neue', sans-serif; font-size: 1.6rem; letter-spacing: 0.08em; color: var(--text); opacity: 0.3; margin-bottom: 0.4rem; }
+  .empty-state p { font-size: 0.83rem; }
+
+  .star-row { display: flex; gap: 0.3rem; margin-top: 0.2rem; }
+  .star { font-size: 1.2rem; cursor: pointer; opacity: 0.3; transition: opacity 0.15s, transform 0.1s; }
+  .star.active { opacity: 1; }
+  .star:hover { transform: scale(1.2); }
+
+  ::-webkit-scrollbar { width: 5px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  @media (max-width: 640px) {
+    header, nav, main, #syncBar { padding-left: 1.2rem; padding-right: 1.2rem; }
+    .grid { grid-template-columns: repeat(auto-fill, minmax(128px,1fr)); gap: 0.9rem; }
+  }
+</style>
+</head>
+<body>
+
+<!-- SETUP -->
+<div id="setupScreen">
+  <div class="setup-box">
+    <div class="setup-logo">Мої<span>Фільми</span></div>
+    <div class="setup-sub">Синхронізація між пристроями через GitHub Gist</div>
+
+    <div class="setup-step">
+      <div class="step-num">1</div>
+      <div>Зайди на <a href="https://github.com/settings/tokens/new" target="_blank">github.com → Settings → Developer settings → Personal access tokens → Tokens (classic)</a></div>
+    </div>
+    <div class="setup-step">
+      <div class="step-num">2</div>
+      <div>Натисни <strong style="color:var(--text)">"Generate new token (classic)"</strong>, дай будь-яку назву (наприклад <em>movies</em>)</div>
+    </div>
+    <div class="setup-step">
+      <div class="step-num">3</div>
+      <div>Постав галочку лише на <code>gist</code> — більше нічого не потрібно</div>
+    </div>
+    <div class="setup-step">
+      <div class="step-num">4</div>
+      <div>Натисни "Generate token", скопіюй його нижче (він показується тільки один раз!)</div>
+    </div>
+
+    <div class="setup-input-wrap">
+      <label>GitHub Personal Access Token</label>
+      <input type="password" id="tokenInput" placeholder="ghp_xxxxxxxxxxxxxxxxxxxxxxxx" autocomplete="off">
+      <div class="setup-error" id="setupError"></div>
+    </div>
+    <button class="setup-btn" id="setupBtn">Підключити →</button>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <div id="syncBar">
+    <div class="sync-dot" id="syncDot"></div>
+    <span id="syncStatus">Підключаємось...</span>
+    <button onclick="logout()">Вийти</button>
+  </div>
+
+  <header>
+    <div class="logo">Мої<span>Фільми</span></div>
+    <div class="stats">
+      <div class="stat"><div class="stat-num" id="totalCount">0</div><div class="stat-label">Всього</div></div>
+      <div class="divider"></div>
+      <div class="stat"><div class="stat-num" id="watchedCount">0</div><div class="stat-label">Переглянуто</div></div>
+      <div class="divider"></div>
+      <div class="stat"><div class="stat-num" id="wishCount">0</div><div class="stat-label">Хочу</div></div>
+    </div>
+  </header>
+
+  <nav>
+    <button class="tab active" data-filter="all">Всі</button>
+    <button class="tab" data-filter="watched">✓ Переглянуті</button>
+    <button class="tab" data-filter="wishlist">♡ Хочу дивитись</button>
+    <button class="add-btn" id="openAdd">＋ Додати фільм</button>
+  </nav>
+
+  <main>
+    <div class="grid" id="grid"></div>
+    <div class="empty-state" id="emptyState" style="display:none">
+      <div class="empty-icon">🎬</div>
+      <h3>Тут поки порожньо</h3>
+      <p>Додай свій перший фільм</p>
+    </div>
+  </main>
+</div>
+
+<!-- MODAL -->
+<div class="modal-bg" id="modalBg" style="display:none">
+  <div class="modal">
+    <div class="modal-title" id="modalTitle">НОВИЙ ФІЛЬМ</div>
+    <div class="field">
+      <label>Назва фільму</label>
+      <input type="text" id="inputTitle" placeholder="Почни вводити назву..." autocomplete="off">
+      <div class="search-results" id="searchResults" style="display:none"></div>
+    </div>
+    <div class="field" id="posterPreviewField" style="display:none">
+      <label>Постер</label>
+      <img id="posterPreview" src="" alt="" style="height:110px;border-radius:3px;object-fit:cover;">
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem">
+      <div class="field"><label>Рік</label><input type="number" id="inputYear" placeholder="2024" min="1900" max="2030"></div>
+      <div class="field"><label>Жанр</label><input type="text" id="inputGenre" placeholder="Драма, Трилер..."></div>
+    </div>
+    <div class="field">
+      <label>Статус</label>
+      <select id="inputStatus">
+        <option value="wishlist">♡ Хочу подивитись</option>
+        <option value="watched">✓ Переглянуто</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Оцінка</label>
+      <div class="star-row" id="starRow">
+        <span class="star" data-v="1">★</span><span class="star" data-v="2">★</span>
+        <span class="star" data-v="3">★</span><span class="star" data-v="4">★</span>
+        <span class="star" data-v="5">★</span>
+      </div>
+    </div>
+    <div class="field">
+      <label>Нотатки</label>
+      <textarea id="inputNotes" placeholder="Враження, хто порадив..." rows="2" style="resize:vertical"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" id="closeModal">Скасувати</button>
+      <button class="btn-save" id="saveMovie">Зберегти</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const GIST_FILE = 'my-movies-data.json';
+const TMDB_IMG  = 'https://image.tmdb.org/t/p/w300';
+const TMDB_KEY  = '3e1a8af5524ee0f91b17bb7748de95ec';
+
+let token   = localStorage.getItem('gh_token') || '';
+let gistId  = localStorage.getItem('gh_gist_id') || '';
+let movies  = [];
+let filter  = 'all';
+let editId  = null;
+let rating  = 0;
+let poster  = '';
+let srTimer = null;
+let svTimer = null;
+
+// ── GitHub Gist ──────────────────────────────────────────────────────────────
+async function ghFetch(method, path, body) {
+  const r = await fetch('https://api.github.com' + path, {
+    method,
+    headers: { 'Authorization': 'token ' + token, 'Content-Type': 'application/json', 'Accept': 'application/vnd.github.v3+json' },
+    body: body ? JSON.stringify(body) : undefined
+  });
+  if (!r.ok) { const e = await r.json().catch(()=>({})); throw new Error(e.message || r.statusText); }
+  return r.json();
+}
+
+async function loadGist() {
+  sync('syncing', 'Завантажуємо...');
+  try {
+    if (!gistId) {
+      const list = await ghFetch('GET', '/gists');
+      const ex = list.find(g => g.files && g.files[GIST_FILE]);
+      if (ex) { gistId = ex.id; }
+      else {
+        const ng = await ghFetch('POST', '/gists', { description: 'Мої Фільми', public: false, files: { [GIST_FILE]: { content: '[]' } } });
+        gistId = ng.id;
+      }
+      localStorage.setItem('gh_gist_id', gistId);
+    }
+    const g = await ghFetch('GET', '/gists/' + gistId);
+    movies = JSON.parse(g.files[GIST_FILE]?.content || '[]');
+    sync('ok', 'Синхронізовано');
+    render();
+  } catch(e) { sync('error', 'Помилка: ' + e.message); }
+}
+
+async function saveGist() {
+  sync('syncing', 'Зберігаємо...');
+  try {
+    await ghFetch('PATCH', '/gists/' + gistId, { files: { [GIST_FILE]: { content: JSON.stringify(movies, null, 2) } } });
+    sync('ok', 'Збережено · ' + new Date().toLocaleTimeString('uk-UA', {hour:'2-digit', minute:'2-digit'}));
+  } catch(e) { sync('error', 'Не вдалося: ' + e.message); }
+}
+
+function queueSave() { clearTimeout(svTimer); svTimer = setTimeout(saveGist, 800); }
+
+function sync(state, text) {
+  document.getElementById('syncDot').className = 'sync-dot ' + state;
+  document.getElementById('syncStatus').textContent = text;
+}
+
+// ── Setup ────────────────────────────────────────────────────────────────────
+document.getElementById('setupBtn').onclick = async () => {
+  const t = document.getElementById('tokenInput').value.trim();
+  const errEl = document.getElementById('setupError');
+  const btn = document.getElementById('setupBtn');
+  if (!t) return;
+  errEl.style.display = 'none';
+  btn.disabled = true; btn.textContent = 'Перевіряємо...';
+  try {
+    const r = await fetch('https://api.github.com/user', { headers: { 'Authorization': 'token ' + t } });
+    if (!r.ok) throw new Error('Невірний токен — перевір і спробуй ще раз');
+    token = t;
+    localStorage.setItem('gh_token', token);
+    gistId = ''; localStorage.removeItem('gh_gist_id');
+    showApp();
+    await loadGist();
+  } catch(e) {
+    errEl.textContent = e.message; errEl.style.display = 'block';
+    btn.disabled = false; btn.textContent = 'Підключити →';
+  }
+};
+
+function showApp() {
+  document.getElementById('setupScreen').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+}
+
+function logout() {
+  if (!confirm('Вийти? Дані залишаться у GitHub Gist.')) return;
+  localStorage.removeItem('gh_token'); localStorage.removeItem('gh_gist_id');
+  location.reload();
+}
+
+// ── Render ───────────────────────────────────────────────────────────────────
+function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function updateStats() {
+  document.getElementById('totalCount').textContent   = movies.length;
+  document.getElementById('watchedCount').textContent = movies.filter(m=>m.status==='watched').length;
+  document.getElementById('wishCount').textContent    = movies.filter(m=>m.status==='wishlist').length;
+}
+
+function render() {
+  updateStats();
+  const grid = document.getElementById('grid');
+  const empty = document.getElementById('emptyState');
+  const list = filter === 'all' ? movies : movies.filter(m => m.status === filter);
+  if (!list.length) { grid.innerHTML = ''; empty.style.display = 'block'; return; }
+  empty.style.display = 'none';
+  grid.innerHTML = list.map((m, i) => {
+    const stars = m.rating ? '★'.repeat(m.rating) : '';
+    const imgTag = m.poster ? `<img class="card-poster" src="${esc(m.poster)}" alt="${esc(m.title)}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">` : '';
+    const ph = `<div class="card-ph" style="${m.poster?'display:none':''}"><div class="ph-icon">🎬</div><div>${esc(m.title.substring(0,20))}</div></div>`;
+    const badge = m.status==='watched' ? '<div class="w-badge">✓</div>' : '<div class="w-badge" style="opacity:.3">♡</div>';
+    return `
+      <div class="card" style="animation-delay:${i*.04}s">
+        ${imgTag}${ph}${badge}
+        <div class="card-overlay">
+          <button class="ov-btn" onclick="toggleStatus('${m.id}',event)">${m.status==='watched'?'♡ В список':'✓ Переглянуто'}</button>
+          <button class="ov-btn" onclick="openEdit('${m.id}',event)">✏ Редагувати</button>
+          <button class="ov-btn danger" onclick="delMovie('${m.id}',event)">✕ Видалити</button>
+        </div>
+        <div class="card-info">
+          <div class="card-title" title="${esc(m.title)}">${esc(m.title)}</div>
+          <div class="card-meta">${m.year?`<span>${m.year}</span>`:''}${stars?`<span class="card-rating">${stars}</span>`:''}</div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+// ── Actions ──────────────────────────────────────────────────────────────────
+function toggleStatus(id, e) {
+  e.stopPropagation();
+  const m = movies.find(x=>x.id===id);
+  if (m) { m.status = m.status==='watched'?'wishlist':'watched'; render(); queueSave(); }
+}
+function delMovie(id, e) {
+  e.stopPropagation();
+  movies = movies.filter(m=>m.id!==id); render(); queueSave();
+}
+function openEdit(id, e) {
+  e.stopPropagation();
+  const m = movies.find(x=>x.id===id); if (!m) return;
+  editId = id; poster = m.poster||''; rating = m.rating||0;
+  document.getElementById('modalTitle').textContent = 'РЕДАГУВАТИ';
+  document.getElementById('inputTitle').value = m.title;
+  document.getElementById('inputYear').value  = m.year||'';
+  document.getElementById('inputGenre').value = m.genre||'';
+  document.getElementById('inputStatus').value= m.status;
+  document.getElementById('inputNotes').value = m.notes||'';
+  if (m.poster) { document.getElementById('posterPreview').src = m.poster; document.getElementById('posterPreviewField').style.display='block'; }
+  else { document.getElementById('posterPreviewField').style.display='none'; }
+  updateStars(); openModal();
+}
+
+// ── Modal ────────────────────────────────────────────────────────────────────
+function openModal() { document.getElementById('modalBg').style.display='flex'; }
+function closeModal() {
+  document.getElementById('modalBg').style.display='none';
+  editId=null; poster=''; rating=0;
+  ['inputTitle','inputYear','inputGenre','inputNotes'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('inputStatus').value='wishlist';
+  document.getElementById('searchResults').style.display='none';
+  document.getElementById('posterPreviewField').style.display='none';
+  document.getElementById('modalTitle').textContent='НОВИЙ ФІЛЬМ';
+  updateStars();
+}
+document.getElementById('openAdd').onclick = openModal;
+document.getElementById('closeModal').onclick = closeModal;
+document.getElementById('modalBg').onclick = e => { if (e.target===document.getElementById('modalBg')) closeModal(); };
+
+// ── TMDB ─────────────────────────────────────────────────────────────────────
+document.getElementById('inputTitle').addEventListener('input', e => {
+  const q = e.target.value.trim();
+  clearTimeout(srTimer);
+  const box = document.getElementById('searchResults');
+  if (q.length < 2) { box.style.display='none'; return; }
+  box.innerHTML='<div class="searching-hint">Шукаємо...</div>'; box.style.display='block';
+  srTimer = setTimeout(async () => {
+    try {
+      const res = await fetch(`https://api.themoviedb.org/3/search/movie?api_key=${TMDB_KEY}&query=${encodeURIComponent(q)}&language=uk-UA`);
+      const data = await res.json();
+      const results = (data.results||[]).slice(0,6);
+      if (!results.length) { box.innerHTML='<div class="searching-hint">Нічого не знайдено</div>'; return; }
+      box.innerHTML = results.map(r => {
+        const yr = r.release_date ? r.release_date.substring(0,4) : '';
+        const th = r.poster_path ? TMDB_IMG+r.poster_path : '';
+        return `<div class="sr-item" onclick='pickResult(${JSON.stringify(r)})'>
+          ${th?`<img src="${th}" alt="">` : '<div style="width:28px;height:42px;background:var(--surface2);border-radius:2px"></div>'}
+          <div class="sr-info"><div class="sr-name">${esc(r.title)}</div><div class="sr-year">${yr}${r.original_title!==r.title?' · '+esc(r.original_title):''}</div></div>
+        </div>`;
+      }).join('');
+    } catch {}
+  }, 400);
+});
+
+function pickResult(r) {
+  document.getElementById('inputTitle').value = r.title;
+  if (r.release_date) document.getElementById('inputYear').value = r.release_date.substring(0,4);
+  if (r.poster_path) {
+    poster = TMDB_IMG + r.poster_path;
+    document.getElementById('posterPreview').src = poster;
+    document.getElementById('posterPreviewField').style.display='block';
+  }
+  document.getElementById('searchResults').style.display='none';
+}
+
+// ── Stars ─────────────────────────────────────────────────────────────────────
+function updateStars() {
+  document.querySelectorAll('.star').forEach(s => s.classList.toggle('active', parseInt(s.dataset.v) <= rating));
+}
+document.getElementById('starRow').addEventListener('click', e => {
+  const s = e.target.closest('.star'); if (!s) return;
+  rating = parseInt(s.dataset.v); updateStars();
+});
+
+// ── Save movie ────────────────────────────────────────────────────────────────
+document.getElementById('saveMovie').onclick = () => {
+  const title = document.getElementById('inputTitle').value.trim();
+  if (!title) { document.getElementById('inputTitle').focus(); return; }
+  if (editId) {
+    const m = movies.find(x=>x.id===editId);
+    if (m) Object.assign(m, {
+      title, year: document.getElementById('inputYear').value,
+      genre: document.getElementById('inputGenre').value,
+      status: document.getElementById('inputStatus').value,
+      notes: document.getElementById('inputNotes').value,
+      rating, ...(poster ? {poster} : {})
+    });
+  } else {
+    movies.unshift({ id: Date.now().toString(), title,
+      year: document.getElementById('inputYear').value,
+      genre: document.getElementById('inputGenre').value,
+      status: document.getElementById('inputStatus').value,
+      notes: document.getElementById('inputNotes').value,
+      rating, poster, addedAt: Date.now()
+    });
+  }
+  render(); queueSave(); closeModal();
+};
+
+// ── Filters ───────────────────────────────────────────────────────────────────
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.onclick = () => {
+    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+    tab.classList.add('active'); filter = tab.dataset.filter; render();
+  };
+});
+
+// ── Boot ──────────────────────────────────────────────────────────────────────
+if (token) { showApp(); loadGist(); }
+</script>
+</body>
+</html>
