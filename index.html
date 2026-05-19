@@ -369,8 +369,7 @@
 
 <script>
 const GIST_FILE = 'my-movies-data.json';
-const TMDB_IMG  = 'https://image.tmdb.org/t/p/w300';
-const TMDB_KEY  = '3e1a8af5524ee0f91b17bb7748de95ec';
+const OMDB_KEY  = 'be4ab50d';
 
 let token   = localStorage.getItem('gh_token') || '';
 let gistId  = localStorage.getItem('gh_gist_id') || '';
@@ -548,23 +547,18 @@ document.getElementById('inputTitle').addEventListener('input', e => {
   box.innerHTML='<div class="searching-hint">Шукаємо...</div>'; box.style.display='block';
   srTimer = setTimeout(async () => {
     try {
-      // Search in both Ukrainian and English, merge results
-      const [r1, r2] = await Promise.all([
-        fetch(`https://api.themoviedb.org/3/search/movie?api_key=${TMDB_KEY}&query=${encodeURIComponent(q)}&language=uk-UA`).then(r=>r.json()).catch(()=>({results:[]})),
-        fetch(`https://api.themoviedb.org/3/search/movie?api_key=${TMDB_KEY}&query=${encodeURIComponent(q)}&language=en-US`).then(r=>r.json()).catch(()=>({results:[]}))
-      ]);
-      const seen = new Set();
-      const merged = [...(r1.results||[]), ...(r2.results||[])].filter(m => {
-        if (seen.has(m.id)) return false; seen.add(m.id); return true;
-      });
-      const results = merged.slice(0,6);
-      if (!results.length) { box.innerHTML='<div class="searching-hint">Нічого не знайдено</div>'; return; }
+      const res = await fetch(`https://www.omdbapi.com/?s=${encodeURIComponent(q)}&type=movie&apikey=${OMDB_KEY}`);
+      const data = await res.json();
+      if (data.Response === 'False' || !data.Search?.length) {
+        box.innerHTML='<div class="searching-hint">Нічого не знайдено</div>'; return;
+      }
+      const results = data.Search.slice(0, 6);
       box.innerHTML = results.map(r => {
-        const yr = r.release_date ? r.release_date.substring(0,4) : '';
-        const th = r.poster_path ? TMDB_IMG+r.poster_path : '';
-        return `<div class="sr-item" onclick='pickResult(${JSON.stringify(r)})'>
-          ${th?`<img src="${th}" alt="">` : '<div style="width:28px;height:42px;background:var(--surface2);border-radius:2px"></div>'}
-          <div class="sr-info"><div class="sr-name">${esc(r.title)}</div><div class="sr-year">${yr}${r.original_title!==r.title?' · '+esc(r.original_title):''}</div></div>
+        const poster = r.Poster && r.Poster !== 'N/A' ? r.Poster : '';
+        const payload = JSON.stringify({imdbID: r.imdbID, title: r.Title, year: r.Year, poster});
+        return `<div class="sr-item" onclick='pickResult(${payload.replace(/'/g,"&#39;")})'>
+          ${poster ? `<img src="${poster}" alt="">` : '<div style="width:28px;height:42px;background:var(--surface2);border-radius:2px"></div>'}
+          <div class="sr-info"><div class="sr-name">${esc(r.Title)}</div><div class="sr-year">${r.Year||''}</div></div>
         </div>`;
       }).join('');
     } catch {}
@@ -573,9 +567,9 @@ document.getElementById('inputTitle').addEventListener('input', e => {
 
 function pickResult(r) {
   document.getElementById('inputTitle').value = r.title;
-  if (r.release_date) document.getElementById('inputYear').value = r.release_date.substring(0,4);
-  if (r.poster_path) {
-    poster = TMDB_IMG + r.poster_path;
+  if (r.year) document.getElementById('inputYear').value = r.year.substring(0,4);
+  if (r.poster) {
+    poster = r.poster;
     document.getElementById('posterPreview').src = poster;
     document.getElementById('posterPreviewField').style.display='block';
   }
