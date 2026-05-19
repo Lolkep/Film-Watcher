@@ -1,0 +1,835 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Мої Фільми</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #13131a;
+    --surface2: #1c1c27;
+    --accent: #e8c96d;
+    --accent2: #c44b4b;
+    --text: #e8e4dc;
+    --muted: #6b6878;
+    --border: #2a2a38;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Grain overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 999;
+    opacity: 0.4;
+  }
+
+  header {
+    padding: 2.5rem 3rem 0;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 2rem;
+    flex-wrap: wrap;
+  }
+
+  .logo {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(2.8rem, 6vw, 5rem);
+    letter-spacing: 0.08em;
+    line-height: 0.9;
+    color: var(--text);
+  }
+
+  .logo span {
+    color: var(--accent);
+    display: block;
+  }
+
+  .stats {
+    display: flex;
+    gap: 2rem;
+    align-items: center;
+    padding-bottom: 0.5rem;
+  }
+
+  .stat {
+    text-align: center;
+  }
+
+  .stat-num {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 2.2rem;
+    color: var(--accent);
+    line-height: 1;
+  }
+
+  .stat-label {
+    font-size: 0.7rem;
+    color: var(--muted);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  .divider {
+    width: 1px;
+    height: 40px;
+    background: var(--border);
+  }
+
+  nav {
+    padding: 1.5rem 3rem;
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .tab {
+    padding: 0.45rem 1.2rem;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.82rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s;
+    border-radius: 2px;
+  }
+
+  .tab:hover { color: var(--text); border-color: var(--muted); }
+
+  .tab.active {
+    background: var(--accent);
+    color: var(--bg);
+    border-color: var(--accent);
+    font-weight: 500;
+  }
+
+  .add-btn {
+    margin-left: auto;
+    padding: 0.5rem 1.4rem;
+    background: var(--accent2);
+    color: white;
+    border: none;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.85rem;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    border-radius: 2px;
+    transition: opacity 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .add-btn:hover { opacity: 0.85; }
+
+  main {
+    padding: 1rem 3rem 4rem;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 1.5rem;
+  }
+
+  .card {
+    position: relative;
+    cursor: pointer;
+    group: true;
+    animation: fadeUp 0.4s ease both;
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .card-poster {
+    width: 100%;
+    aspect-ratio: 2/3;
+    object-fit: cover;
+    display: block;
+    background: var(--surface);
+    border-radius: 4px;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+  }
+
+  .card:hover .card-poster {
+    transform: scale(1.03) translateY(-4px);
+    box-shadow: 0 20px 50px rgba(0,0,0,0.6);
+  }
+
+  .card-poster-placeholder {
+    width: 100%;
+    aspect-ratio: 2/3;
+    background: var(--surface2);
+    border-radius: 4px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    color: var(--muted);
+    font-size: 0.75rem;
+    letter-spacing: 0.05em;
+    text-align: center;
+    padding: 1rem;
+    transition: transform 0.3s ease;
+  }
+
+  .card:hover .card-poster-placeholder {
+    transform: scale(1.03) translateY(-4px);
+  }
+
+  .poster-icon { font-size: 2rem; opacity: 0.4; }
+
+  .watched-badge {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 28px;
+    height: 28px;
+    background: rgba(10,10,15,0.85);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.85rem;
+    backdrop-filter: blur(4px);
+  }
+
+  .card-info {
+    padding: 0.6rem 0 0;
+  }
+
+  .card-title {
+    font-size: 0.85rem;
+    font-weight: 500;
+    line-height: 1.3;
+    margin-bottom: 0.2rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .card-meta {
+    font-size: 0.72rem;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .card-rating {
+    color: var(--accent);
+    font-weight: 500;
+  }
+
+  .card-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(10,10,15,0.88);
+    border-radius: 4px;
+    opacity: 0;
+    transition: opacity 0.25s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.6rem;
+    backdrop-filter: blur(2px);
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 28px;
+  }
+
+  .card:hover .card-overlay { opacity: 1; }
+
+  .overlay-btn {
+    padding: 0.4rem 1rem;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.75rem;
+    letter-spacing: 0.06em;
+    cursor: pointer;
+    border-radius: 2px;
+    transition: all 0.15s;
+    width: 80%;
+    text-align: center;
+  }
+
+  .overlay-btn:hover { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+  .overlay-btn.danger:hover { background: var(--accent2); border-color: var(--accent2); }
+
+  /* Modal */
+  .modal-bg {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.8);
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
+    backdrop-filter: blur(6px);
+    animation: fadeIn 0.2s ease;
+  }
+
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 2rem;
+    width: 100%;
+    max-width: 500px;
+    border-radius: 6px;
+    animation: slideUp 0.25s ease;
+  }
+
+  @keyframes slideUp {
+    from { transform: translateY(30px); opacity: 0; }
+    to   { transform: translateY(0); opacity: 1; }
+  }
+
+  .modal-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.8rem;
+    letter-spacing: 0.08em;
+    margin-bottom: 1.5rem;
+    color: var(--accent);
+  }
+
+  .field {
+    margin-bottom: 1.1rem;
+  }
+
+  .field label {
+    display: block;
+    font-size: 0.72rem;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 0.4rem;
+  }
+
+  .field input, .field select, .field textarea {
+    width: 100%;
+    padding: 0.7rem 0.9rem;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.88rem;
+    border-radius: 3px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .field input:focus, .field select:focus, .field textarea:focus {
+    border-color: var(--accent);
+  }
+
+  .field select option { background: var(--surface); }
+
+  .search-results {
+    margin-top: 0.5rem;
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    overflow: hidden;
+    max-height: 200px;
+    overflow-y: auto;
+  }
+
+  .search-result-item {
+    padding: 0.6rem 0.9rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    border-bottom: 1px solid var(--border);
+    transition: background 0.15s;
+    font-size: 0.85rem;
+  }
+
+  .search-result-item:last-child { border-bottom: none; }
+  .search-result-item:hover { background: var(--surface2); }
+
+  .search-result-item img {
+    width: 30px;
+    height: 45px;
+    object-fit: cover;
+    border-radius: 2px;
+    background: var(--bg);
+  }
+
+  .result-info { flex: 1; min-width: 0; }
+  .result-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .result-year { font-size: 0.72rem; color: var(--muted); }
+
+  .searching-hint {
+    padding: 0.7rem 0.9rem;
+    font-size: 0.78rem;
+    color: var(--muted);
+    text-align: center;
+  }
+
+  .modal-actions {
+    display: flex;
+    gap: 0.75rem;
+    margin-top: 1.5rem;
+    justify-content: flex-end;
+  }
+
+  .btn-cancel {
+    padding: 0.55rem 1.3rem;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.85rem;
+    cursor: pointer;
+    border-radius: 3px;
+    transition: all 0.15s;
+  }
+
+  .btn-cancel:hover { border-color: var(--text); color: var(--text); }
+
+  .btn-save {
+    padding: 0.55rem 1.6rem;
+    background: var(--accent);
+    border: none;
+    color: var(--bg);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    border-radius: 3px;
+    transition: opacity 0.15s;
+  }
+
+  .btn-save:hover { opacity: 0.85; }
+
+  .empty-state {
+    text-align: center;
+    padding: 5rem 2rem;
+    color: var(--muted);
+  }
+
+  .empty-icon { font-size: 3.5rem; margin-bottom: 1rem; opacity: 0.3; }
+
+  .empty-state h3 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.8rem;
+    letter-spacing: 0.08em;
+    color: var(--text);
+    opacity: 0.3;
+    margin-bottom: 0.5rem;
+  }
+
+  .empty-state p { font-size: 0.85rem; }
+
+  .star-row {
+    display: flex;
+    gap: 0.3rem;
+    margin-top: 0.2rem;
+  }
+
+  .star {
+    font-size: 1.2rem;
+    cursor: pointer;
+    opacity: 0.3;
+    transition: opacity 0.15s, transform 0.1s;
+  }
+
+  .star.active { opacity: 1; }
+  .star:hover { transform: scale(1.2); }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  @media (max-width: 640px) {
+    header, nav, main { padding-left: 1.2rem; padding-right: 1.2rem; }
+    .grid { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 1rem; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    Мої<span>Фільми</span>
+  </div>
+  <div class="stats">
+    <div class="stat">
+      <div class="stat-num" id="totalCount">0</div>
+      <div class="stat-label">Всього</div>
+    </div>
+    <div class="divider"></div>
+    <div class="stat">
+      <div class="stat-num" id="watchedCount">0</div>
+      <div class="stat-label">Переглянуто</div>
+    </div>
+    <div class="divider"></div>
+    <div class="stat">
+      <div class="stat-num" id="wishCount">0</div>
+      <div class="stat-label">Хочу</div>
+    </div>
+  </div>
+</header>
+
+<nav>
+  <button class="tab active" data-filter="all">Всі</button>
+  <button class="tab" data-filter="watched">✓ Переглянуті</button>
+  <button class="tab" data-filter="wishlist">♡ Хочу дивитись</button>
+  <button class="add-btn" id="openAdd">＋ Додати фільм</button>
+</nav>
+
+<main>
+  <div class="grid" id="grid"></div>
+  <div class="empty-state" id="emptyState" style="display:none">
+    <div class="empty-icon">🎬</div>
+    <h3>Тут поки порожньо</h3>
+    <p>Додай свій перший фільм</p>
+  </div>
+</main>
+
+<!-- ADD/EDIT MODAL -->
+<div class="modal-bg" id="modalBg" style="display:none">
+  <div class="modal">
+    <div class="modal-title" id="modalTitle">НОВИЙ ФІЛЬМ</div>
+
+    <div class="field">
+      <label>Назва фільму</label>
+      <input type="text" id="inputTitle" placeholder="Почни вводити назву..." autocomplete="off">
+      <div class="search-results" id="searchResults" style="display:none"></div>
+    </div>
+
+    <div class="field" id="posterPreviewField" style="display:none">
+      <label>Постер</label>
+      <img id="posterPreview" src="" alt="" style="height:120px; border-radius:3px; object-fit:cover;">
+    </div>
+
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem">
+      <div class="field">
+        <label>Рік</label>
+        <input type="number" id="inputYear" placeholder="2024" min="1900" max="2030">
+      </div>
+      <div class="field">
+        <label>Жанр</label>
+        <input type="text" id="inputGenre" placeholder="Драма, Трилер...">
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Статус</label>
+      <select id="inputStatus">
+        <option value="wishlist">♡ Хочу подивитись</option>
+        <option value="watched">✓ Переглянуто</option>
+      </select>
+    </div>
+
+    <div class="field" id="ratingField">
+      <label>Оцінка</label>
+      <div class="star-row" id="starRow">
+        <span class="star" data-v="1">★</span>
+        <span class="star" data-v="2">★</span>
+        <span class="star" data-v="3">★</span>
+        <span class="star" data-v="4">★</span>
+        <span class="star" data-v="5">★</span>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Нотатки</label>
+      <textarea id="inputNotes" placeholder="Враження, рекомендував хтось..." rows="2" style="resize:vertical"></textarea>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-cancel" id="closeModal">Скасувати</button>
+      <button class="btn-save" id="saveMovie">Зберегти</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── State ────────────────────────────────────────────────────────────────────
+let movies = JSON.parse(localStorage.getItem('myMovies') || '[]');
+let currentFilter = 'all';
+let editingId = null;
+let selectedRating = 0;
+let pendingPosterUrl = '';
+let pendingTmdbId = null;
+let searchTimeout = null;
+
+// ─── TMDB (open, no key needed via proxy workaround using OMDB free or inline)
+// We use TMDB search without API key via public endpoint pattern
+const TMDB_IMG = 'https://image.tmdb.org/t/p/w300';
+
+// Use Open Movie Database (OMDb) free tier — requires free API key
+// We'll use TMDB's public search endpoint instead
+async function searchTMDB(query) {
+  try {
+    // Using TMDB's public search (they allow browser requests)
+    const url = `https://api.themoviedb.org/3/search/movie?api_key=3e1a8af5524ee0f91b17bb7748de95ec&query=${encodeURIComponent(query)}&language=uk-UA`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error();
+    const data = await res.json();
+    return data.results || [];
+  } catch {
+    return [];
+  }
+}
+
+// ─── Render ────────────────────────────────────────────────────────────────────
+function save() {
+  localStorage.setItem('myMovies', JSON.stringify(movies));
+}
+
+function updateStats() {
+  document.getElementById('totalCount').textContent = movies.length;
+  document.getElementById('watchedCount').textContent = movies.filter(m => m.status === 'watched').length;
+  document.getElementById('wishCount').textContent = movies.filter(m => m.status === 'wishlist').length;
+}
+
+function renderGrid() {
+  const grid = document.getElementById('grid');
+  const empty = document.getElementById('emptyState');
+  const filtered = currentFilter === 'all' ? movies :
+    movies.filter(m => m.status === currentFilter);
+
+  if (!filtered.length) {
+    grid.innerHTML = '';
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+
+  grid.innerHTML = filtered.map((m, i) => {
+    const stars = m.rating ? '★'.repeat(m.rating) : '';
+    const poster = m.poster
+      ? `<img class="card-poster" src="${m.poster}" alt="${m.title}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">`
+      : '';
+    const placeholder = `<div class="card-poster-placeholder" style="${m.poster ? 'display:none' : ''}"><div class="poster-icon">🎬</div><div>${m.title.substring(0,20)}</div></div>`;
+    const badge = m.status === 'watched' ? '<div class="watched-badge">✓</div>' : '<div class="watched-badge" style="opacity:0.3">♡</div>';
+
+    return `
+      <div class="card" style="animation-delay:${i * 0.04}s" data-id="${m.id}">
+        ${poster}${placeholder}
+        ${badge}
+        <div class="card-overlay">
+          <button class="overlay-btn" onclick="toggleStatus('${m.id}', event)">
+            ${m.status === 'watched' ? '♡ В список' : '✓ Переглянуто'}
+          </button>
+          <button class="overlay-btn" onclick="openEdit('${m.id}', event)">✏ Редагувати</button>
+          <button class="overlay-btn danger" onclick="deleteMovie('${m.id}', event)">✕ Видалити</button>
+        </div>
+        <div class="card-info">
+          <div class="card-title" title="${m.title}">${m.title}</div>
+          <div class="card-meta">
+            ${m.year ? `<span>${m.year}</span>` : ''}
+            ${stars ? `<span class="card-rating">${stars}</span>` : ''}
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+
+  updateStats();
+}
+
+// ─── Actions ──────────────────────────────────────────────────────────────────
+function toggleStatus(id, e) {
+  e.stopPropagation();
+  const m = movies.find(x => x.id === id);
+  if (m) {
+    m.status = m.status === 'watched' ? 'wishlist' : 'watched';
+    save(); renderGrid();
+  }
+}
+
+function deleteMovie(id, e) {
+  e.stopPropagation();
+  movies = movies.filter(m => m.id !== id);
+  save(); renderGrid();
+}
+
+function openEdit(id, e) {
+  e.stopPropagation();
+  const m = movies.find(x => x.id === id);
+  if (!m) return;
+  editingId = id;
+  pendingPosterUrl = m.poster || '';
+  selectedRating = m.rating || 0;
+  document.getElementById('modalTitle').textContent = 'РЕДАГУВАТИ';
+  document.getElementById('inputTitle').value = m.title;
+  document.getElementById('inputYear').value = m.year || '';
+  document.getElementById('inputGenre').value = m.genre || '';
+  document.getElementById('inputStatus').value = m.status;
+  document.getElementById('inputNotes').value = m.notes || '';
+  if (m.poster) {
+    document.getElementById('posterPreview').src = m.poster;
+    document.getElementById('posterPreviewField').style.display = 'block';
+  } else {
+    document.getElementById('posterPreviewField').style.display = 'none';
+  }
+  updateStars();
+  openModal();
+}
+
+// ─── Modal ────────────────────────────────────────────────────────────────────
+function openModal() {
+  document.getElementById('modalBg').style.display = 'flex';
+}
+
+function closeModalFn() {
+  document.getElementById('modalBg').style.display = 'none';
+  editingId = null;
+  pendingPosterUrl = '';
+  pendingTmdbId = null;
+  selectedRating = 0;
+  document.getElementById('inputTitle').value = '';
+  document.getElementById('inputYear').value = '';
+  document.getElementById('inputGenre').value = '';
+  document.getElementById('inputNotes').value = '';
+  document.getElementById('inputStatus').value = 'wishlist';
+  document.getElementById('searchResults').style.display = 'none';
+  document.getElementById('posterPreviewField').style.display = 'none';
+  document.getElementById('modalTitle').textContent = 'НОВИЙ ФІЛЬМ';
+  updateStars();
+}
+
+document.getElementById('openAdd').onclick = openModal;
+document.getElementById('closeModal').onclick = closeModalFn;
+document.getElementById('modalBg').onclick = (e) => { if (e.target === document.getElementById('modalBg')) closeModalFn(); };
+
+// ─── Search ───────────────────────────────────────────────────────────────────
+document.getElementById('inputTitle').addEventListener('input', (e) => {
+  const q = e.target.value.trim();
+  clearTimeout(searchTimeout);
+  if (q.length < 2) {
+    document.getElementById('searchResults').style.display = 'none';
+    return;
+  }
+  document.getElementById('searchResults').innerHTML = '<div class="searching-hint">Шукаємо...</div>';
+  document.getElementById('searchResults').style.display = 'block';
+
+  searchTimeout = setTimeout(async () => {
+    const results = await searchTMDB(q);
+    const box = document.getElementById('searchResults');
+    if (!results.length) {
+      box.innerHTML = '<div class="searching-hint">Нічого не знайдено</div>';
+      return;
+    }
+    box.innerHTML = results.slice(0, 6).map(r => {
+      const year = r.release_date ? r.release_date.substring(0,4) : '';
+      const thumb = r.poster_path ? TMDB_IMG + r.poster_path : '';
+      return `
+        <div class="search-result-item" onclick="selectResult(${JSON.stringify(r).replace(/'/g,"&#39;")})">
+          ${thumb ? `<img src="${thumb}" alt="">` : '<div style="width:30px;height:45px;background:var(--surface2);border-radius:2px"></div>'}
+          <div class="result-info">
+            <div class="result-name">${r.title}</div>
+            <div class="result-year">${year}${r.original_title !== r.title ? ' · ' + r.original_title : ''}</div>
+          </div>
+        </div>`;
+    }).join('');
+  }, 400);
+});
+
+function selectResult(r) {
+  document.getElementById('inputTitle').value = r.title;
+  if (r.release_date) document.getElementById('inputYear').value = r.release_date.substring(0,4);
+  if (r.genre_ids) {/* could map but keep simple */}
+  if (r.poster_path) {
+    pendingPosterUrl = TMDB_IMG + r.poster_path;
+    document.getElementById('posterPreview').src = pendingPosterUrl;
+    document.getElementById('posterPreviewField').style.display = 'block';
+  }
+  document.getElementById('searchResults').style.display = 'none';
+}
+
+// ─── Stars ────────────────────────────────────────────────────────────────────
+function updateStars() {
+  document.querySelectorAll('.star').forEach(s => {
+    s.classList.toggle('active', parseInt(s.dataset.v) <= selectedRating);
+  });
+}
+
+document.getElementById('starRow').addEventListener('click', (e) => {
+  const s = e.target.closest('.star');
+  if (!s) return;
+  selectedRating = parseInt(s.dataset.v);
+  updateStars();
+});
+
+// ─── Save ─────────────────────────────────────────────────────────────────────
+document.getElementById('saveMovie').onclick = () => {
+  const title = document.getElementById('inputTitle').value.trim();
+  if (!title) { document.getElementById('inputTitle').focus(); return; }
+
+  if (editingId) {
+    const m = movies.find(x => x.id === editingId);
+    if (m) {
+      m.title = title;
+      m.year = document.getElementById('inputYear').value;
+      m.genre = document.getElementById('inputGenre').value;
+      m.status = document.getElementById('inputStatus').value;
+      m.notes = document.getElementById('inputNotes').value;
+      m.rating = selectedRating;
+      if (pendingPosterUrl) m.poster = pendingPosterUrl;
+    }
+  } else {
+    movies.unshift({
+      id: Date.now().toString(),
+      title,
+      year: document.getElementById('inputYear').value,
+      genre: document.getElementById('inputGenre').value,
+      status: document.getElementById('inputStatus').value,
+      notes: document.getElementById('inputNotes').value,
+      rating: selectedRating,
+      poster: pendingPosterUrl,
+      addedAt: Date.now()
+    });
+  }
+
+  save(); renderGrid(); closeModalFn();
+};
+
+// ─── Filters ──────────────────────────────────────────────────────────────────
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.onclick = () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    currentFilter = tab.dataset.filter;
+    renderGrid();
+  };
+});
+
+// ─── Init ─────────────────────────────────────────────────────────────────────
+renderGrid();
+</script>
+</body>
+</html>
